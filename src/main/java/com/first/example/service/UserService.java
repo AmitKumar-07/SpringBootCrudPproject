@@ -1,54 +1,51 @@
 package com.first.example.service;
 
 import com.first.example.entities.User;
+import com.first.example.exception.BadRequestExcepton;
+import com.first.example.exception.UserNotFoundException;
 import com.first.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
 public class UserService {
     @Autowired private UserRepository repo;
-
-    public List<User> listAll(){ //tested
+    //1
+    public List<User> listAll(){
         return (List<User>) repo.findAll();
     }
-    public User getUser(int id)
-    {
+    //2
+    public User getUser(int id) {
+        boolean isTrue=repo.existsById(id);
+        if(!isTrue) {
+               throw new UserNotFoundException("user having id "+String.valueOf(id)+" is not present");
+        }
         Optional<User> byId = repo.findById(id);
-        if(byId.isEmpty()) {
-            throw new RuntimeException("user having id "+String.valueOf(id)+" is not present");
-        }
-        return byId.get();
+            return byId.orElseThrow(()->new NoSuchElementException("element is not here"));
     }
-
-    public void saveUser(User user) throws Exception {
-
-                if(repo.existsById(user.getId())) {
-                    throw new Exception("User having id "+user.getId()+" is already present");
+    //3
+    public void saveUser(User user) {
+             if(repo.existsById(user.getId())) {
+                    throw new BadRequestExcepton("User having id "+user.getId()+" is already present");
                 }
-
-                    repo.save(user);
-
+             repo.save(user);
     }
-    public void deleteUserById(int userId) throws Exception {
-        if(repo.existsById(userId)){
-             repo.deleteById(userId);
+    //4
+    public void deleteUserById(int userId) {
+        if(!repo.existsById(userId)) {
+            throw new UserNotFoundException("Student with id " + userId + " does not exists");
         }
-        else {
-            throw new Exception("User having id " + String.valueOf(userId) + " is not present");
-        }
+        repo.deleteById(userId);
     }
-    public void deleteAllUser() throws Exception{
-
-       List<User> users = (List<User>) repo.findAll();
-              if(users.isEmpty())
-                  throw new Exception("Database is empty");
-              else
-                   repo.deleteAll();
+    //5
+    public long deleteAllUser() {
+        long count1 = repo.count();
+            repo.deleteAll();
+           return count1;
     }
 
     public UserService(UserRepository repo) {
